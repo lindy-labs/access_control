@@ -1,6 +1,6 @@
 #[starknet::contract]
 mod mock_access_control {
-    use cairo_access_control::access_control::access_control_component;
+    use access_control::access_control::access_control_component;
     use starknet::ContractAddress;
 
     component!(path: access_control_component, storage: access_control, event: AccessControlEvent);

@@ -1,8 +1,8 @@
 mod test_access_control {
-    use cairo_access_control::access_control::access_control_component::{AccessControlPublic, AccessControlHelpers};
-    use cairo_access_control::access_control::access_control_component;
+    use access_control::access_control::access_control_component::{AccessControlPublic, AccessControlHelpers};
+    use access_control::access_control::access_control_component;
     //use opus::tests::common;
-    use cairo_access_control::mock_access_control::mock_access_control;
+    use access_control::mock_access_control::mock_access_control;
     use snforge_std::{spy_events, SpyOn, EventSpy, EventFetcher, event_name_hash, Event, start_prank, CheatTarget};
     use starknet::contract_address::{ContractAddress, ContractAddressZeroable, contract_address_try_from_felt252};
     //
