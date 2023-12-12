@@ -2,107 +2,102 @@
 
 ![tests](https://github.com/lindy-labs/cairo-accesscontrol/actions/workflows/tests.yml/badge.svg)
 
-This library is an implementation of member-based access control in Cairo for [StarkNet](https://www.cairo-lang.org/docs/), which allows an address to be assigned multiple roles using a single storage mapping. 
+This library implements member-based access control as a component in Cairo for [StarkNet](https://www.cairo-lang.org/docs/), which allows an address to be assigned multiple roles using a single storage mapping. 
 
-The design of this library was originally inspired by OpenZeppelin's [access control library](https://github.com/OpenZeppelin/cairo-contracts/tree/main/src/openzeppelin/access/accesscontrol), as well as Python's [flags](https://docs.python.org/3/library/enum.html) and Vyper's [enums](https://docs.python.org/3/library/enum.html).
+The design of this library was originally inspired by OpenZeppelin's [access control library](https://github.com/OpenZeppelin/cairo-contracts), as well as Python's [flags](https://docs.python.org/3/library/enum.html) and Vyper's [enums](https://docs.vyperlang.org/en/stable/types.html#enums).
 
 ## Overview
 
-This library uses felt values in the form of 2<sup>n</sup>, where `n` is in the range `0 <= n <= 251`, to represent user-defined roles as members. 
+This library uses `u128` values in the form of 2<sup>n</sup>, where `n` is in the range `0 <= n < 128`, to represent user-defined roles as members. 
 
-Roles should be defined in a separate Cairo contract as its own namespace. For example:
+We recommend users to define the roles in a standalone Cairo contract as its own namespace. For example:
 
 ```cairo
-namespace Roles {
-    const MANAGER = 2 ** 0;
-    const STAFF = 2 ** 1;
-    const USER = 2 ** 2;
+mod roles {
+    const MANAGER: u128 = 1;
+    const STAFF: u128 = 2;
+    const USER: u128 = 4;
 }
 ```
 
-Multiple roles can be represented as a single value by performing bitwise AND. Using the above example, an address can be assigned both the `MANAGER` and `STAFF` roles using a single value of 3 (equivalent to `Roles.MANAGER | Roles.STAFF` or `2 ** 0 + 2 ** 1`).
+Multiple roles can be represented as a single value by performing bitwise AND. Using the above example, an address can be assigned both the `MANAGER` and `STAFF` roles using a single value of 3 (equivalent to `roles.MANAGER | roles.STAFF` or `2 ** 0 + 2 ** 1`).
 
 Similarly, multiple roles can be granted, revoked or checked for in a single transaction using bitwise operations:
 - granting role(s) is a bitwise AND operation of the currently assigned value and the value of the new role(s);
 - revoking role(s) is a bitwise AND operation of the currently assigned value and the complement (bitwise NOT) of the value of the role(s) to be revoked; and
 - checking for membership is a bitwise OR operation of the currently assigned value and the value of the role(s) being checked for.
 
-Note that functions which rely on this access control library will require the `bitwise_ptr` implicit argument and `BitwiseBuiltin`.
-
-
 ## Usage
 
-To use this library in a Cairo contract:
-1. Include a copy of `accesscontrol_library.cairo` in your project, and import the library into the Cairo contract.
-2. Define the available roles as constants in a namespace in a separate Cairo contract, and import this namespace into the Cairo contract.
+To use the component in a Cairo contract:
+1. Include a copy of `access_control.cairo` in your project, and import the `access_control_component`  into the Cairo contract.
+2. Define the available roles as constants in a module in a separate Cairo file, and import this module into the Cairo contract.
 
-For example, assuming you have a `contracts/` folder with `accesscontrol_library.cairo` and `roles.cairo`, and you want to import both into a Cairo file within the same folder:
+For example, assuming you have a `src/` folder with `access_control.cairo` and the roles defined in a `user_roles` module in `roles.cairo`, and you want to import both into a Cairo file within the same folder:
 
-```cairo
-%lang starknet
+```
+use starknet::ContractAddress;
 
-from starkware.cairo.common.cairo_builtins import BitwiseBuiltin, HashBuiltin
-from contracts.accesscontrol_library import AccessControl
-from contracts.roles import Roles
-
-@view
-func is_manager{syscall_ptr: felt*, pedersen_ptr: HashBuiltin*, range_check_ptr, bitwise_ptr: BitwiseBuiltin*
-}(user: felt) -> (authorized: felt) {
-    let authorized: felt = AccessControl.has_role(Roles.MANAGER, user);
-    return (authorized,);
+#[starknet::interface]
+trait IMockContract<TContractState> {
+    fn is_manager(self: @TContractState, user: ContractAddress) -> bool;
 }
 
-@external
-func authorize{syscall_ptr : felt*, pedersen_ptr : HashBuiltin*, range_check_ptr, bitwise_ptr: BitwiseBuiltin*}(
-    role: felt, user: felt
-) {
-    AccessControl.assert_admin();
-    AccessControl._grant_role(role, user);
-    return ();
-}
+#[starknet::contract]
+mod mock_contract {
+    use src::access_control::access_control_component;
+    use src::roles::user_roles;
+    use starknet::ContractAddress;
+    use super::IMockContract;
 
-@external
-func manager_only_action{syscall_ptr : felt*, pedersen_ptr : HashBuiltin*, range_check_ptr, bitwise_ptr: BitwiseBuiltin*}() {
-    AccessControl.assert_has_role(Roles.MANAGER);
-    // Insert logic here
-    return ();
+    component!(path: access_control_component, storage: access_control, event: AccessControlEvent);
+
+    #[abi(embed_v0)]
+    impl AccessControlPublic = access_control_component::AccessControl<ContractState>;
+    impl AccessControlHelpers = access_control_component::AccessControlHelpers<ContractState>;
+
+    #[storage]
+    struct Storage {
+        #[substorage(v0)]
+        access_control: access_control_component::Storage
+    }
+
+    #[event]
+    #[derive(Copy, Drop, starknet::Event, PartialEq)]
+    enum Event {
+        AccessControlEvent: access_control_component::Event
+    }
+
+    #[constructor]
+    fn constructor(ref self: ContractState, admin: ContractAddress, roles: Option<u128>) {
+        self.access_control.initializer(admin, roles);
+    }
+
+    #[abi(embed_v0)]
+    impl IMockContractImpl of IMockContract<ContractState> {
+        fn is_manager(self: @ContractState, user: ContractAddress) -> bool {
+            self.access_control.has_role(user_roles::MANAGER, user)
+        }
+    }
 }
 ```
 
-You can also refer to the test file `tests/test_accesscontrol.cairo` for another example.
-
-We have also included a set of external and view functions in `accesscontrol_external.cairo` that you can import into your Cairo contracts. 
+You can refer to the test file `src/mock_access_control.cairo` for another example.
 
 ## Development
 
-### Set up the project
+### Prerequisites
 
-Clone the repository
-
-```bash
-git clone git@github.com:lindy-labs/cairo-accesscontrol.git
-```
-
-`cd` into it and create a Python virtual environment:
-
-```bash
-cd cairo-accesscontrol
-python3 -m venv env
-source env/bin/activate
-```
-
-Install dependencies:
-
-```bash
-python -m pip install -r requirements.txt
-```
+- [Cairo](https://github.com/starkware-libs/cairo)
+- [Scarb](https://docs.swmansion.com/scarb)
+- [Starknet Foundry](https://github.com/foundry-rs/starknet-foundry)
 
 ### Run tests
 
 To run the tests:
 
 ```bash
-pytest
+scarb test
 ```
 
 ## Formal Verification
