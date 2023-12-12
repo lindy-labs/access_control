@@ -29,11 +29,24 @@ Similarly, multiple roles can be granted, revoked or checked for in a single tra
 
 ## Usage
 
-To use the component in a Cairo contract:
-1. Include a copy of `access_control.cairo` in your project, and import the `access_control_component`  into the Cairo contract.
-2. Define the available roles as constants in a module in a separate Cairo file, and import this module into the Cairo contract.
+To use this library, add the repository as a dependency in your `Scarb.toml`:
 
-For example, assuming you have a `src/` folder with `access_control.cairo` and the roles defined in a `user_roles` module in `roles.cairo`, and you want to import both into a Cairo file within the same folder:
+```
+[dependencies]
+wadray = { git = "https://github.com/lindy-labs/cairo-wadray.git" }
+```
+
+Next, define the available roles as constants in a module in a separate Cairo file, and import this module into the Cairo contract.
+```cairo
+mod user_roles {
+    const MANAGER: u128 = 1;
+    const STAFF: u128 = 2;
+    const USER: u128 = 4;
+}
+```
+then import both the component and the roles into your Cairo contract
+
+For example, assuming you have a `src/` folder with the roles defined in a `user_roles` module in `roles.cairo`:
 
 ```
 use starknet::ContractAddress;
@@ -45,7 +58,7 @@ trait IMockContract<TContractState> {
 
 #[starknet::contract]
 mod mock_contract {
-    use src::access_control::access_control_component;
+    use access_control::access_control::access_control_component;
     use src::roles::user_roles;
     use starknet::ContractAddress;
     use super::IMockContract;
@@ -81,8 +94,6 @@ mod mock_contract {
     }
 }
 ```
-
-You can refer to the test file `src/mock_access_control.cairo` for another example.
 
 ## Development
 
