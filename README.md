@@ -2,7 +2,7 @@
 
 ![tests](https://github.com/lindy-labs/cairo-accesscontrol/actions/workflows/tests.yml/badge.svg)
 
-This library implements member-based access control as a component in Cairo for [StarkNet](https://www.cairo-lang.org/docs/), which allows an address to be assigned multiple roles using a single storage mapping. 
+This library implements member-based access control as a component in Cairo for [Starknet](https://www.cairo-lang.org/docs/), which allows an address to be assigned multiple roles using a single storage mapping. 
 
 The design of this library was originally inspired by OpenZeppelin's [access control library](https://github.com/OpenZeppelin/cairo-contracts), as well as Python's [flags](https://docs.python.org/3/library/enum.html) and Vyper's [enums](https://docs.vyperlang.org/en/stable/types.html#enums).
 
