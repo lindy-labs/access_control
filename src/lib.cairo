@@ -1,4 +1,8 @@
 mod access_control;
-mod mock_access_control;
+
+use access_control::access_control_component;
 #[cfg(test)]
-mod test_access_control;
+mod tests {
+    mod mock_access_control;
+    mod test_access_control;
+}

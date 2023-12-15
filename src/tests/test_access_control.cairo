@@ -1,9 +1,12 @@
 mod test_access_control {
-    use access_control::access_control::access_control_component::{AccessControlPublic, AccessControlHelpers};
-    use access_control::access_control::access_control_component;
-    //use opus::tests::common;
-    use access_control::mock_access_control::mock_access_control;
-    use snforge_std::{spy_events, SpyOn, EventSpy, EventFetcher, event_name_hash, Event, start_prank, CheatTarget};
+    use access_control::access_control_component::{AccessControlPublic, AccessControlHelpers};
+    use access_control::access_control_component;
+    use access_control::tests::mock_access_control::mock_access_control;
+    use snforge_std::cheatcodes::events::EventAssertions;
+    use snforge_std::{
+        spy_events, SpyOn, EventSpy, EventFetcher, event_name_hash, Event, start_prank, CheatTarget, test_address,
+        PrintTrait
+    };
     use starknet::contract_address::{ContractAddress, ContractAddressZeroable, contract_address_try_from_felt252};
     //
     // Constants
@@ -15,8 +18,10 @@ mod test_access_control {
     const R3: u128 = 128_u128;
     const R4: u128 = 256_u128;
 
+    const ADMIN_ADDR: felt252 = 'access control admin';
+
     fn admin() -> ContractAddress {
-        contract_address_try_from_felt252('access control admin').unwrap()
+        contract_address_try_from_felt252(ADMIN_ADDR).unwrap()
     }
 
     fn badguy() -> ContractAddress {
@@ -67,22 +72,37 @@ mod test_access_control {
 
     #[test]
     fn test_initializer() {
+        let mut spy = spy_events(SpyOn::One(test_address()));
+
         let admin = admin();
 
         let state = setup(admin);
 
         assert(state.get_admin() == admin, 'initialize wrong admin');
-    //let event = pop_log::<access_control_component::AdminChanged>(zero_addr()).unwrap();
-    //assert(event.old_admin.is_zero(), 'should be zero address');
-    //assert(event.new_admin == admin(), 'wrong admin in event');
 
-    //assert(pop_log_raw(zero_addr()).is_none(), 'unexpected event');
+        let expected_events = array![
+            (
+                test_address(),
+                access_control_component::Event::AdminChanged(
+                    access_control_component::AdminChanged { old_admin: zero_addr(), new_admin: admin(), }
+                )
+            ),
+        ];
+        spy.fetch_events();
+
+        assert(spy.events.len() == 1, 'wrong number of events');
+
+        let (_, event) = spy.events.at(0);
+        assert(*event.keys[1] == event_name_hash('AdminChanged'), 'wrong event name');
+        assert(*event.data[0] == 0, 'should be zero address');
+        assert(*event.data[1] == ADMIN_ADDR, 'should be admin adddress');
     }
 
     #[test]
     fn test_grant_role() {
         let mut state = setup(admin());
-        //common::drop_all_events(zero_addr());
+
+        let mut spy = spy_events(SpyOn::One(test_address()));
 
         default_grant(ref state);
 
@@ -90,15 +110,20 @@ mod test_access_control {
         assert(state.has_role(R1, u), 'role R1 not granted');
         assert(state.has_role(R2, u), 'role R2 not granted');
         assert(state.get_roles(u) == R1 + R2, 'not all roles granted');
-    //let event = pop_log::<access_control_component::RoleGranted>(zero_addr()).unwrap();
-    //assert(event.user == u, 'wrong user in event #1');
-    //assert(event.role_granted == R1, 'wrong role in event #1');
 
-    //let event = pop_log::<access_control_component::RoleGranted>(zero_addr()).unwrap();
-    // assert(event.user == u, 'wrong user in event #2');
-    // assert(event.role_granted == R2, 'wrong role in event #2');
+        spy.fetch_events();
 
-    // assert(pop_log_raw(zero_addr()).is_none(), 'unexpected event');
+        assert(spy.events.len() == 2, 'wrong number of events');
+
+        let (from, event) = spy.events.at(0);
+        assert(*event.keys[1] == event_name_hash('RoleGranted'), 'wrong event name');
+        assert(*event.data[0] == u.into(), 'wrong user in event #1');
+        assert(*event.data[1] == R1.into(), 'wrong role in event #1');
+
+        let (from, event) = spy.events.at(1);
+        assert(*event.keys[1] == event_name_hash('RoleGranted'), 'wrong event name');
+        assert(*event.data[0] == u.into(), 'wrong user in event #2');
+        assert(*event.data[1] == R2.into(), 'wrong role in event #2');
     }
 
     #[test]
@@ -125,18 +150,22 @@ mod test_access_control {
         let mut state = setup(admin());
         default_grant(ref state);
 
-        //common::drop_all_events(zero_addr());
+        let mut spy = spy_events(SpyOn::One(test_address()));
 
         let u = user();
         state.revoke_role(R1, u);
         assert(state.has_role(R1, u) == false, 'role R1 not revoked');
         assert(state.has_role(R2, u), 'role R2 not kept');
         assert(state.get_roles(u) == R2, 'incorrect roles');
-    // let event = pop_log::<access_control_component::RoleRevoked>(zero_addr()).unwrap();
-    // assert(event.user == u, 'wrong user in event');
-    // assert(event.role_revoked == R1, 'wrong role in event');
 
-    // assert(pop_log_raw(zero_addr()).is_none(), 'unexpected event');
+        spy.fetch_events();
+
+        assert(spy.events.len() == 1, 'wrong number of events');
+
+        let (_, event) = spy.events.at(0);
+        assert(*event.keys[1] == event_name_hash('RoleRevoked'), 'wrong event name');
+        assert(*event.data[0] == u.into(), 'wrong user in event');
+        assert(*event.data[1] == R1.into(), 'wrong role in event');
     }
 
     #[test]
@@ -152,7 +181,7 @@ mod test_access_control {
         let mut state = setup(admin());
         default_grant(ref state);
 
-        //common::drop_all_events(zero_addr());
+        let mut spy = spy_events(SpyOn::One(test_address()));
 
         let u = user();
         start_prank(CheatTarget::All, u);
@@ -162,30 +191,39 @@ mod test_access_control {
         // renouncing non-granted role should pass
         let non_existent_role: u128 = 64;
         state.renounce_role(non_existent_role);
-    // let event = pop_log::<access_control_component::RoleRevoked>(zero_addr()).unwrap();
-    // assert(event.user == u, 'wrong user in event #1');
-    // assert(event.role_revoked == R1, 'wrong role in event #1');
 
-    // let event = pop_log::<access_control_component::RoleRevoked>(zero_addr()).unwrap();
-    // assert(event.user == u, 'wrong user in event #2');
-    // assert(event.role_revoked == non_existent_role, 'wrong role in event #2');
+        spy.fetch_events();
 
-    // assert(pop_log_raw(zero_addr()).is_none(), 'unexpected event');
+        assert(spy.events.len() == 2, 'wrong number of events');
+
+        let (from, event) = spy.events.at(0);
+        assert(*event.keys[1] == event_name_hash('RoleRevoked'), 'wrong event name');
+        assert(*event.data[0] == u.into(), 'wrong user in event #1');
+        assert(*event.data[1] == R1.into(), 'wrong role in event #1');
+
+        let (from, event) = spy.events.at(1);
+        assert(*event.keys[1] == event_name_hash('RoleRevoked'), 'wrong event name');
+        assert(*event.data[0] == u.into(), 'wrong user in event #2');
+        assert(*event.data[1] == non_existent_role.into(), 'wrong role in event #2');
     }
 
     #[test]
     fn test_set_pending_admin() {
         let mut state = setup(admin());
 
-        //common::drop_all_events(zero_addr());
+        let mut spy = spy_events(SpyOn::One(test_address()));
 
         let pending_admin = user();
         state.set_pending_admin(pending_admin);
         assert(state.get_pending_admin() == pending_admin, 'pending admin not changed');
-    // let event = pop_log::<access_control_component::NewPendingAdmin>(zero_addr()).unwrap();
-    // assert(event.new_admin == pending_admin, 'wrong user in event');
 
-    // assert(pop_log_raw(zero_addr()).is_none(), 'unexpected event');
+        spy.fetch_events();
+
+        assert(spy.events.len() == 1, 'wrong number of events');
+
+        let (from, event) = spy.events.at(0);
+        assert(*event.keys[1] == event_name_hash('NewPendingAdmin'), 'wrong event name');
+        assert(*event.data[0] == pending_admin.into(), 'wrong user in event');
     }
 
     #[test]
@@ -204,18 +242,22 @@ mod test_access_control {
         let pending_admin = user();
         set_pending_admin(ref state, current_admin, pending_admin);
 
-        //common::drop_all_events(zero_addr());
+        let mut spy = spy_events(SpyOn::One(test_address()));
 
         start_prank(CheatTarget::All, pending_admin);
         state.accept_admin();
 
         assert(state.get_admin() == pending_admin, 'admin not changed');
         assert(state.get_pending_admin().is_zero(), 'pending admin not reset');
-    // let event = pop_log::<access_control_component::AdminChanged>(zero_addr()).unwrap();
-    // assert(event.old_admin == current_admin, 'wrong old admin in event');
-    // assert(event.new_admin == pending_admin, 'wrong new admin in event');
 
-    // assert(pop_log_raw(zero_addr()).is_none(), 'unexpected event');
+        spy.fetch_events();
+
+        assert(spy.events.len() == 1, 'wrong number of events');
+
+        let (from, event) = spy.events.at(0);
+        assert(*event.keys[1] == event_name_hash('AdminChanged'), 'wrong event name');
+        assert(*event.data[0] == current_admin.into(), 'wrong old admin in event');
+        assert(*event.data[1] == pending_admin.into(), 'wrong new admin in event');
     }
 
     #[test]
