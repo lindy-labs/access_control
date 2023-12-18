@@ -115,12 +115,12 @@ mod test_access_control {
 
         assert(spy.events.len() == 2, 'wrong number of events');
 
-        let (from, event) = spy.events.at(0);
+        let (_, event) = spy.events.at(0);
         assert(*event.keys[1] == event_name_hash('RoleGranted'), 'wrong event name');
         assert(*event.data[0] == u.into(), 'wrong user in event #1');
         assert(*event.data[1] == R1.into(), 'wrong role in event #1');
 
-        let (from, event) = spy.events.at(1);
+        let (_, event) = spy.events.at(1);
         assert(*event.keys[1] == event_name_hash('RoleGranted'), 'wrong event name');
         assert(*event.data[0] == u.into(), 'wrong user in event #2');
         assert(*event.data[1] == R2.into(), 'wrong role in event #2');
@@ -196,12 +196,12 @@ mod test_access_control {
 
         assert(spy.events.len() == 2, 'wrong number of events');
 
-        let (from, event) = spy.events.at(0);
+        let (_, event) = spy.events.at(0);
         assert(*event.keys[1] == event_name_hash('RoleRevoked'), 'wrong event name');
         assert(*event.data[0] == u.into(), 'wrong user in event #1');
         assert(*event.data[1] == R1.into(), 'wrong role in event #1');
 
-        let (from, event) = spy.events.at(1);
+        let (_, event) = spy.events.at(1);
         assert(*event.keys[1] == event_name_hash('RoleRevoked'), 'wrong event name');
         assert(*event.data[0] == u.into(), 'wrong user in event #2');
         assert(*event.data[1] == non_existent_role.into(), 'wrong role in event #2');
@@ -221,7 +221,7 @@ mod test_access_control {
 
         assert(spy.events.len() == 1, 'wrong number of events');
 
-        let (from, event) = spy.events.at(0);
+        let (_, event) = spy.events.at(0);
         assert(*event.keys[1] == event_name_hash('NewPendingAdmin'), 'wrong event name');
         assert(*event.data[0] == pending_admin.into(), 'wrong user in event');
     }
@@ -254,7 +254,7 @@ mod test_access_control {
 
         assert(spy.events.len() == 1, 'wrong number of events');
 
-        let (from, event) = spy.events.at(0);
+        let (_, event) = spy.events.at(0);
         assert(*event.keys[1] == event_name_hash('AdminChanged'), 'wrong event name');
         assert(*event.data[0] == current_admin.into(), 'wrong old admin in event');
         assert(*event.data[1] == pending_admin.into(), 'wrong new admin in event');
