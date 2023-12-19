@@ -10,7 +10,7 @@ The design of this library was originally inspired by OpenZeppelin's [access con
 
 This library uses `u128` values in the form of 2<sup>n</sup>, where `n` is in the range `0 <= n < 128`, to represent user-defined roles as members. 
 
-We recommend users to define the roles in a standalone Cairo contract as its own namespace. For example:
+We recommend users to define the roles in a separate Cairo file. For example:
 
 ```cairo
 mod roles {
@@ -36,7 +36,7 @@ To use this library, add the repository as a dependency in your `Scarb.toml`:
 wadray = { git = "https://github.com/lindy-labs/cairo-wadray.git" }
 ```
 
-Next, define the available roles as constants in a module in a separate Cairo file, and import this module into the Cairo contract.
+Next, define the available roles in a separate Cairo file:
 ```cairo
 mod user_roles {
     const MANAGER: u128 = 1;
@@ -44,10 +44,9 @@ mod user_roles {
     const USER: u128 = 4;
 }
 ```
-then import both the component and the roles into your Cairo contract
+then import both the component and the roles into your Cairo contract.
 
 For example, assuming you have a `src/` folder with the roles defined in a `user_roles` module in `roles.cairo`:
-
 ```
 use starknet::ContractAddress;
 
