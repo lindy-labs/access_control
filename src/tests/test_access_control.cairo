@@ -90,9 +90,9 @@ mod test_access_control {
         ];
         spy.fetch_events();
 
-        assert(spy.events.len() == 1, 'wrong number of events');
-
         let (_, event) = spy.events.at(0);
+
+        assert(spy.events.len() == 1, 'wrong number of events');
         assert(*event.keys[1] == event_name_hash('AdminChanged'), 'wrong event name');
         assert(*event.data[0] == 0, 'should be zero address');
         assert(*event.data[1] == ADMIN_ADDR, 'should be admin adddress');
