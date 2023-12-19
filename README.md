@@ -13,14 +13,14 @@ This library uses `u128` values in the form of 2<sup>n</sup>, where `n` is in th
 We recommend users to define the roles in a separate Cairo file. For example:
 
 ```cairo
-mod roles {
+mod user_roles {
     const MANAGER: u128 = 1;
     const STAFF: u128 = 2;
     const USER: u128 = 4;
 }
 ```
 
-Multiple roles can be represented as a single value by performing bitwise AND. Using the above example, an address can be assigned both the `MANAGER` and `STAFF` roles using a single value of 3 (equivalent to `roles.MANAGER | roles.STAFF` or `2 ** 0 + 2 ** 1`).
+Multiple roles can be represented as a single value by performing bitwise AND. Using the above example, an address can be assigned both the `MANAGER` and `STAFF` roles using a single value of 3 (equivalent to `user_roles::MANAGER | user_roles::STAFF` or `2 ** 0 + 2 ** 1`).
 
 Similarly, multiple roles can be granted, revoked or checked for in a single transaction using bitwise operations:
 - granting role(s) is a bitwise AND operation of the currently assigned value and the value of the new role(s);
