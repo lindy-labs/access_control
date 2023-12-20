@@ -1,14 +1,16 @@
 # Member-based access control library for Cairo
 
-![tests](https://github.com/lindy-labs/cairo-accesscontrol/actions/workflows/tests.yml/badge.svg)
+![tests](https://github.com/lindy-labs/access_control/actions/workflows/tests.yml/badge.svg)
 
-This library implements member-based access control as a component in Cairo for [Starknet](https://www.cairo-lang.org/docs/), which allows an address to be assigned multiple roles using a single storage mapping. 
+This library implements member-based access control as a component in Cairo for [Starknet](https://www.cairo-lang.org/docs/), which allows an address to be assigned multiple roles using a single storage mapping and in a single transaction, saving on storage and transaction costs.
 
 The design of this library was originally inspired by OpenZeppelin's [access control library](https://github.com/OpenZeppelin/cairo-contracts), as well as Python's [flags](https://docs.python.org/3/library/enum.html) and Vyper's [enums](https://docs.vyperlang.org/en/stable/types.html#enums).
 
 ## Overview
 
-This library uses `u128` values in the form of 2<sup>n</sup>, where `n` is in the range `0 <= n < 128`, to represent user-defined roles as members. 
+This library uses `u128` values in the form of 2<sup>n</sup>, where `n` is in the range `0 <= n < 128`, to represent user-defined roles as members. The primary benefit of this approach is that multiple roles can be granted or revoked using a single storage variable and in a single transaction, saving on storage and transaction costs. The only drawback is that users are limited to 128 roles per contract.
+
+Note that this access control library also relies on an admin address with superuser privileges i.e. the admin can grant or revoke any roles for any address, including the admin itself. This may introduce certain trust assumptions for the admin depending on your usage of the library.
 
 We recommend users to define the roles in a separate Cairo file. For example:
 
@@ -33,7 +35,7 @@ To use this library, add the repository as a dependency in your `Scarb.toml`:
 
 ```
 [dependencies]
-wadray = { git = "https://github.com/lindy-labs/cairo-wadray.git" }
+access_control = { git = "https://github.com/lindy-labs/access_control.git" }
 ```
 
 Next, define the available roles in a separate Cairo file:
@@ -46,7 +48,7 @@ mod user_roles {
 ```
 then import both the component and the roles into your Cairo contract.
 
-For example, assuming you have a `src/` folder with the roles defined in a `user_roles` module in `roles.cairo`:
+For example, assuming you have a project named `my_project` in the top-level `Scarb.toml`, and a `src/` folder with the roles defined in a `user_roles` module in `roles.cairo`:
 ```
 use starknet::ContractAddress;
 
@@ -57,8 +59,8 @@ trait IMockContract<TContractState> {
 
 #[starknet::contract]
 mod mock_contract {
-    use access_control::access_control::access_control_component;
-    use src::roles::user_roles;
+    use access_control::access_control_component;
+    use my_project::roles::user_roles;
     use starknet::ContractAddress;
     use super::IMockContract;
 
@@ -75,7 +77,7 @@ mod mock_contract {
     }
 
     #[event]
-    #[derive(Copy, Drop, starknet::Event, PartialEq)]
+    #[derive(Copy, Drop, starknet::Event)]
     enum Event {
         AccessControlEvent: access_control_component::Event
     }
