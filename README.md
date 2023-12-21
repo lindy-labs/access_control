@@ -1,108 +1,115 @@
 # Member-based access control library for Cairo
 
-![tests](https://github.com/lindy-labs/cairo-accesscontrol/actions/workflows/tests.yml/badge.svg)
+![tests](https://github.com/lindy-labs/access_control/actions/workflows/tests.yml/badge.svg)
 
-This library is an implementation of member-based access control in Cairo for [StarkNet](https://www.cairo-lang.org/docs/), which allows an address to be assigned multiple roles using a single storage mapping. 
+This library implements member-based access control as a component in Cairo for [Starknet](https://www.cairo-lang.org/docs/), which allows an address to be assigned multiple roles using a single storage mapping and in a single transaction, saving on storage and transaction costs.
 
-The design of this library was originally inspired by OpenZeppelin's [access control library](https://github.com/OpenZeppelin/cairo-contracts/tree/main/src/openzeppelin/access/accesscontrol), as well as Python's [flags](https://docs.python.org/3/library/enum.html) and Vyper's [enums](https://docs.python.org/3/library/enum.html).
+The design of this library was originally inspired by OpenZeppelin's [access control library](https://github.com/OpenZeppelin/cairo-contracts), as well as Python's [flags](https://docs.python.org/3/library/enum.html) and Vyper's [enums](https://docs.vyperlang.org/en/stable/types.html#enums).
 
 ## Overview
 
-This library uses felt values in the form of 2<sup>n</sup>, where `n` is in the range `0 <= n <= 251`, to represent user-defined roles as members. 
+This library uses `u128` values in the form of 2<sup>n</sup>, where `n` is in the range `0 <= n < 128`, to represent user-defined roles as members. The primary benefit of this approach is that multiple roles can be granted or revoked using a single storage variable and in a single transaction, saving on storage and transaction costs. The only drawback is that users are limited to 128 roles per contract.
 
-Roles should be defined in a separate Cairo contract as its own namespace. For example:
+Note that this access control library also relies on an admin address with superuser privileges i.e. the admin can grant or revoke any roles for any address, including the admin itself. This may introduce certain trust assumptions for the admin depending on your usage of the library.
+
+We recommend users to define the roles in a separate Cairo file. For example:
 
 ```cairo
-namespace Roles {
-    const MANAGER = 2 ** 0;
-    const STAFF = 2 ** 1;
-    const USER = 2 ** 2;
+mod user_roles {
+    const MANAGER: u128 = 1;
+    const STAFF: u128 = 2;
+    const USER: u128 = 4;
 }
 ```
 
-Multiple roles can be represented as a single value by performing bitwise AND. Using the above example, an address can be assigned both the `MANAGER` and `STAFF` roles using a single value of 3 (equivalent to `Roles.MANAGER | Roles.STAFF` or `2 ** 0 + 2 ** 1`).
+Multiple roles can be represented as a single value by performing bitwise AND. Using the above example, an address can be assigned both the `MANAGER` and `STAFF` roles using a single value of 3 (equivalent to `user_roles::MANAGER | user_roles::STAFF` or `2 ** 0 + 2 ** 1`).
 
 Similarly, multiple roles can be granted, revoked or checked for in a single transaction using bitwise operations:
 - granting role(s) is a bitwise AND operation of the currently assigned value and the value of the new role(s);
 - revoking role(s) is a bitwise AND operation of the currently assigned value and the complement (bitwise NOT) of the value of the role(s) to be revoked; and
 - checking for membership is a bitwise OR operation of the currently assigned value and the value of the role(s) being checked for.
 
-Note that functions which rely on this access control library will require the `bitwise_ptr` implicit argument and `BitwiseBuiltin`.
-
-
 ## Usage
 
-To use this library in a Cairo contract:
-1. Include a copy of `accesscontrol_library.cairo` in your project, and import the library into the Cairo contract.
-2. Define the available roles as constants in a namespace in a separate Cairo contract, and import this namespace into the Cairo contract.
+To use this library, add the repository as a dependency in your `Scarb.toml`:
 
-For example, assuming you have a `contracts/` folder with `accesscontrol_library.cairo` and `roles.cairo`, and you want to import both into a Cairo file within the same folder:
-
-```cairo
-%lang starknet
-
-from starkware.cairo.common.cairo_builtins import BitwiseBuiltin, HashBuiltin
-from contracts.accesscontrol_library import AccessControl
-from contracts.roles import Roles
-
-@view
-func is_manager{syscall_ptr: felt*, pedersen_ptr: HashBuiltin*, range_check_ptr, bitwise_ptr: BitwiseBuiltin*
-}(user: felt) -> (authorized: felt) {
-    let authorized: felt = AccessControl.has_role(Roles.MANAGER, user);
-    return (authorized,);
-}
-
-@external
-func authorize{syscall_ptr : felt*, pedersen_ptr : HashBuiltin*, range_check_ptr, bitwise_ptr: BitwiseBuiltin*}(
-    role: felt, user: felt
-) {
-    AccessControl.assert_admin();
-    AccessControl._grant_role(role, user);
-    return ();
-}
-
-@external
-func manager_only_action{syscall_ptr : felt*, pedersen_ptr : HashBuiltin*, range_check_ptr, bitwise_ptr: BitwiseBuiltin*}() {
-    AccessControl.assert_has_role(Roles.MANAGER);
-    // Insert logic here
-    return ();
-}
+```
+[dependencies]
+access_control = { git = "https://github.com/lindy-labs/access_control.git" }
 ```
 
-You can also refer to the test file `tests/test_accesscontrol.cairo` for another example.
+Next, define the available roles in a separate Cairo file:
+```cairo
+mod user_roles {
+    const MANAGER: u128 = 1;
+    const STAFF: u128 = 2;
+    const USER: u128 = 4;
+}
+```
+then import both the component and the roles into your Cairo contract.
 
-We have also included a set of external and view functions in `accesscontrol_external.cairo` that you can import into your Cairo contracts. 
+For example, assuming you have a project named `my_project` in the top-level `Scarb.toml`, and a `src/` folder with the roles defined in a `user_roles` module in `roles.cairo`:
+```
+use starknet::ContractAddress;
+
+#[starknet::interface]
+trait IMockContract<TContractState> {
+    fn is_manager(self: @TContractState, user: ContractAddress) -> bool;
+}
+
+#[starknet::contract]
+mod mock_contract {
+    use access_control::access_control_component;
+    use my_project::roles::user_roles;
+    use starknet::ContractAddress;
+    use super::IMockContract;
+
+    component!(path: access_control_component, storage: access_control, event: AccessControlEvent);
+
+    #[abi(embed_v0)]
+    impl AccessControlPublic = access_control_component::AccessControl<ContractState>;
+    impl AccessControlHelpers = access_control_component::AccessControlHelpers<ContractState>;
+
+    #[storage]
+    struct Storage {
+        #[substorage(v0)]
+        access_control: access_control_component::Storage
+    }
+
+    #[event]
+    #[derive(Copy, Drop, starknet::Event)]
+    enum Event {
+        AccessControlEvent: access_control_component::Event
+    }
+
+    #[constructor]
+    fn constructor(ref self: ContractState, admin: ContractAddress, roles: Option<u128>) {
+        self.access_control.initializer(admin, roles);
+    }
+
+    #[abi(embed_v0)]
+    impl IMockContractImpl of IMockContract<ContractState> {
+        fn is_manager(self: @ContractState, user: ContractAddress) -> bool {
+            self.access_control.has_role(user_roles::MANAGER, user)
+        }
+    }
+}
+```
 
 ## Development
 
-### Set up the project
+### Prerequisites
 
-Clone the repository
-
-```bash
-git clone git@github.com:lindy-labs/cairo-accesscontrol.git
-```
-
-`cd` into it and create a Python virtual environment:
-
-```bash
-cd cairo-accesscontrol
-python3 -m venv env
-source env/bin/activate
-```
-
-Install dependencies:
-
-```bash
-python -m pip install -r requirements.txt
-```
+- [Cairo](https://github.com/starkware-libs/cairo)
+- [Scarb](https://docs.swmansion.com/scarb)
+- [Starknet Foundry](https://github.com/foundry-rs/starknet-foundry)
 
 ### Run tests
 
 To run the tests:
 
 ```bash
-pytest
+scarb test
 ```
 
 ## Formal Verification
