@@ -92,10 +92,10 @@ mod test_access_control {
 
         let (_, event) = spy.events.at(0);
 
-        assert(spy.events.len() == 1, 'wrong number of events');
-        assert(*event.keys[1] == event_name_hash('AdminChanged'), 'wrong event name');
-        assert(*event.data[0] == 0, 'should be zero address');
-        assert(*event.data[1] == ADMIN_ADDR, 'should be admin adddress');
+        assert_eq!(spy.events.len(), 1, "wrong number of events");
+        assert_eq!(*event.keys[1], event_name_hash('AdminChanged'), "wrong event name");
+        assert_eq!(*event.data[0], 0, "should be zero address");
+        assert_eq!(*event.data[1], ADMIN_ADDR, "should be admin adddress");
     }
 
     #[test]
@@ -109,21 +109,21 @@ mod test_access_control {
         let u = user();
         assert(state.has_role(R1, u), 'role R1 not granted');
         assert(state.has_role(R2, u), 'role R2 not granted');
-        assert(state.get_roles(u) == R1 + R2, 'not all roles granted');
+        assert_eq!(state.get_roles(u), R1 + R2, "not all roles granted");
 
         spy.fetch_events();
 
-        assert(spy.events.len() == 2, 'wrong number of events');
+        assert_eq!(spy.events.len(), 2, "wrong number of events");
 
         let (_, event) = spy.events.at(0);
-        assert(*event.keys[1] == event_name_hash('RoleGranted'), 'wrong event name');
-        assert(*event.data[0] == u.into(), 'wrong user in event #1');
-        assert(*event.data[1] == R1.into(), 'wrong role in event #1');
+        assert_eq!(*event.keys[1], event_name_hash('RoleGranted'), "wrong event name");
+        assert_eq!(*event.data[0], u.into(), "wrong user in event #1");
+        assert_eq!(*event.data[1], R1.into(), "wrong role in event #1");
 
         let (_, event) = spy.events.at(1);
-        assert(*event.keys[1] == event_name_hash('RoleGranted'), 'wrong event name');
-        assert(*event.data[0] == u.into(), 'wrong user in event #2');
-        assert(*event.data[1] == R2.into(), 'wrong role in event #2');
+        assert_eq!(*event.keys[1], event_name_hash('RoleGranted'), "wrong event name");
+        assert_eq!(*event.data[0], u.into(), "wrong user in event #2");
+        assert_eq!(*event.data[1], R2.into(), "wrong role in event #2");
     }
 
     #[test]
@@ -141,8 +141,8 @@ mod test_access_control {
         let u = user();
         let u2 = contract_address_try_from_felt252('user 2').unwrap();
         state.grant_role(R2 + R3 + R4, u2);
-        assert(state.get_roles(u) == R1 + R2, 'wrong roles for u');
-        assert(state.get_roles(u2) == R2 + R3 + R4, 'wrong roles for u2');
+        assert_eq!(state.get_roles(u), R1 + R2, "wrong roles for u");
+        assert_eq!(state.get_roles(u2), R2 + R3 + R4, "wrong roles for u2");
     }
 
     #[test]
@@ -154,18 +154,18 @@ mod test_access_control {
 
         let u = user();
         state.revoke_role(R1, u);
-        assert(state.has_role(R1, u) == false, 'role R1 not revoked');
+        assert_eq!(state.has_role(R1, u), false, "role R1 not revoked");
         assert(state.has_role(R2, u), 'role R2 not kept');
-        assert(state.get_roles(u) == R2, 'incorrect roles');
+        assert_eq!(state.get_roles(u), R2, "incorrect roles");
 
         spy.fetch_events();
 
-        assert(spy.events.len() == 1, 'wrong number of events');
+        assert_eq!(spy.events.len(), 1, "wrong number of events");
 
         let (_, event) = spy.events.at(0);
-        assert(*event.keys[1] == event_name_hash('RoleRevoked'), 'wrong event name');
-        assert(*event.data[0] == u.into(), 'wrong user in event');
-        assert(*event.data[1] == R1.into(), 'wrong role in event');
+        assert_eq!(*event.keys[1], event_name_hash('RoleRevoked'), "wrong event name");
+        assert_eq!(*event.data[0], u.into(), "wrong user in event");
+        assert_eq!(*event.data[1], R1.into(), "wrong role in event");
     }
 
     #[test]
@@ -186,7 +186,7 @@ mod test_access_control {
         let u = user();
         start_prank(CheatTarget::All, u);
         state.renounce_role(R1);
-        assert(state.has_role(R1, u) == false, 'R1 role kept');
+        assert(!state.has_role(R1, u), 'R1 role kept');
 
         // renouncing non-granted role should pass
         let non_existent_role: u128 = 64;
@@ -194,17 +194,17 @@ mod test_access_control {
 
         spy.fetch_events();
 
-        assert(spy.events.len() == 2, 'wrong number of events');
+        assert_eq!(spy.events.len(), 2, "wrong number of events");
 
         let (_, event) = spy.events.at(0);
-        assert(*event.keys[1] == event_name_hash('RoleRevoked'), 'wrong event name');
-        assert(*event.data[0] == u.into(), 'wrong user in event #1');
-        assert(*event.data[1] == R1.into(), 'wrong role in event #1');
+        assert_eq!(*event.keys[1], event_name_hash('RoleRevoked'), "wrong event name");
+        assert_eq!(*event.data[0], u.into(), "wrong user in event #1");
+        assert_eq!(*event.data[1], R1.into(), "wrong role in event #1");
 
         let (_, event) = spy.events.at(1);
-        assert(*event.keys[1] == event_name_hash('RoleRevoked'), 'wrong event name');
-        assert(*event.data[0] == u.into(), 'wrong user in event #2');
-        assert(*event.data[1] == non_existent_role.into(), 'wrong role in event #2');
+        assert_eq!(*event.keys[1], event_name_hash('RoleRevoked'), "wrong event name");
+        assert_eq!(*event.data[0], u.into(), "wrong user in event #2");
+        assert_eq!(*event.data[1], non_existent_role.into(), "wrong role in event #2");
     }
 
     #[test]
@@ -219,11 +219,11 @@ mod test_access_control {
 
         spy.fetch_events();
 
-        assert(spy.events.len() == 1, 'wrong number of events');
+        assert_eq!(spy.events.len(), 1, "wrong number of events");
 
         let (_, event) = spy.events.at(0);
-        assert(*event.keys[1] == event_name_hash('NewPendingAdmin'), 'wrong event name');
-        assert(*event.data[0] == pending_admin.into(), 'wrong user in event');
+        assert_eq!(*event.keys[1], event_name_hash('NewPendingAdmin'), "wrong event name");
+        assert_eq!(*event.data[0], pending_admin.into(), "wrong user in event");
     }
 
     #[test]
@@ -252,12 +252,12 @@ mod test_access_control {
 
         spy.fetch_events();
 
-        assert(spy.events.len() == 1, 'wrong number of events');
+        assert_eq!(spy.events.len(), 1, "wrong number of events");
 
         let (_, event) = spy.events.at(0);
-        assert(*event.keys[1] == event_name_hash('AdminChanged'), 'wrong event name');
-        assert(*event.data[0] == current_admin.into(), 'wrong old admin in event');
-        assert(*event.data[1] == pending_admin.into(), 'wrong new admin in event');
+        assert_eq!(*event.keys[1], event_name_hash('AdminChanged'), "wrong event name");
+        assert_eq!(*event.data[0], current_admin.into(), "wrong old admin in event");
+        assert_eq!(*event.data[1], pending_admin.into(), "wrong new admin in event");
     }
 
     #[test]
