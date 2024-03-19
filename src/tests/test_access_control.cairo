@@ -5,7 +5,6 @@ mod test_access_control {
     use snforge_std::cheatcodes::events::EventAssertions;
     use snforge_std::{
         spy_events, SpyOn, EventSpy, EventFetcher, event_name_hash, Event, start_prank, CheatTarget, test_address,
-        PrintTrait
     };
     use starknet::contract_address::{ContractAddress, ContractAddressZeroable, contract_address_try_from_felt252};
     //
@@ -80,14 +79,6 @@ mod test_access_control {
 
         assert(state.get_admin() == admin, 'initialize wrong admin');
 
-        let expected_events = array![
-            (
-                test_address(),
-                access_control_component::Event::AdminChanged(
-                    access_control_component::AdminChanged { old_admin: zero_addr(), new_admin: admin(), }
-                )
-            ),
-        ];
         spy.fetch_events();
 
         let (_, event) = spy.events.at(0);
