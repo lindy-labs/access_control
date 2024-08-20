@@ -16,13 +16,14 @@ trait IAccessControl<TContractState> {
 #[starknet::component]
 mod access_control_component {
     use starknet::contract_address::ContractAddressZeroable;
+    use starknet::storage::Map;
     use starknet::{ContractAddress, get_caller_address};
 
     #[storage]
     struct Storage {
         admin: ContractAddress,
         pending_admin: ContractAddress,
-        roles: LegacyMap::<ContractAddress, u128>
+        roles: Map::<ContractAddress, u128>
     }
 
     #[event]
