@@ -1,7 +1,7 @@
 use starknet::ContractAddress;
 
 #[starknet::interface]
-trait IAccessControl<TContractState> {
+pub trait IAccessControl<TContractState> {
     fn get_roles(self: @TContractState, account: ContractAddress) -> u128;
     fn has_role(self: @TContractState, role: u128, account: ContractAddress) -> bool;
     fn get_admin(self: @TContractState) -> ContractAddress;
@@ -14,13 +14,15 @@ trait IAccessControl<TContractState> {
 }
 
 #[starknet::component]
-mod access_control_component {
-    use starknet::contract_address::ContractAddressZeroable;
-    use starknet::storage::Map;
+pub mod access_control_component {
+    use core::num::traits::Zero;
+    use starknet::storage::{
+        StoragePointerReadAccess, StoragePointerWriteAccess, StorageMapReadAccess, StorageMapWriteAccess, Map
+    };
     use starknet::{ContractAddress, get_caller_address};
 
     #[storage]
-    struct Storage {
+    pub struct Storage {
         admin: ContractAddress,
         pending_admin: ContractAddress,
         roles: Map::<ContractAddress, u128>
@@ -28,7 +30,7 @@ mod access_control_component {
 
     #[event]
     #[derive(Copy, Drop, starknet::Event, PartialEq)]
-    enum Event {
+    pub enum Event {
         AdminChanged: AdminChanged,
         NewPendingAdmin: NewPendingAdmin,
         RoleGranted: RoleGranted,
@@ -36,30 +38,30 @@ mod access_control_component {
     }
 
     #[derive(Copy, Drop, starknet::Event, PartialEq)]
-    struct AdminChanged {
+    pub struct AdminChanged {
         old_admin: ContractAddress,
         new_admin: ContractAddress
     }
 
     #[derive(Copy, Drop, starknet::Event, PartialEq)]
-    struct NewPendingAdmin {
+    pub struct NewPendingAdmin {
         new_admin: ContractAddress
     }
 
     #[derive(Copy, Drop, starknet::Event, PartialEq)]
-    struct RoleGranted {
+    pub struct RoleGranted {
         user: ContractAddress,
         role_granted: u128
     }
 
     #[derive(Copy, Drop, starknet::Event, PartialEq)]
-    struct RoleRevoked {
+    pub struct RoleRevoked {
         user: ContractAddress,
         role_revoked: u128
     }
 
     #[embeddable_as(AccessControl)]
-    impl AccessControlPublic<
+    pub impl AccessControlPublic<
         TContractState, +HasComponent<TContractState>
     > of super::IAccessControl<ComponentState<TContractState>> {
         //
@@ -118,12 +120,12 @@ mod access_control_component {
             assert(self.get_pending_admin() == caller, 'Caller not pending admin');
             self.set_admin_helper(caller);
 
-            self.pending_admin.write(ContractAddressZeroable::zero());
+            self.pending_admin.write(Zero::zero());
         }
     }
 
     #[generate_trait]
-    impl AccessControlHelpers<
+    pub impl AccessControlHelpers<
         TContractState, +HasComponent<TContractState>
     > of AccessControlHelpersTrait<TContractState> {
         fn initializer(ref self: ComponentState<TContractState>, admin: ContractAddress, roles: Option<u128>) {
