@@ -1,6 +1,6 @@
-pub mod access_control;
+mod access_control;
 
-use access_control::{access_control_component, IAccessControlDispatcher, IAccessControlDispatcherTrait};
+pub use access_control::{access_control_component, IAccessControlDispatcher, IAccessControlDispatcherTrait};
 #[cfg(test)]
 mod tests {
     mod mock_access_control;
