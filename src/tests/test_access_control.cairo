@@ -2,8 +2,9 @@ mod test_access_control {
     use access_control::access_control_component::{AccessControlPublic, AccessControlHelpers};
     use access_control::access_control_component;
     use access_control::tests::mock_access_control::mock_access_control;
+    use core::num::traits::Zero;
     use snforge_std::{spy_events, EventSpy, Event, EventSpyTrait, start_cheat_caller_address, test_address};
-    use starknet::contract_address::{ContractAddress, ContractAddressZeroable, contract_address_try_from_felt252};
+    use starknet::ContractAddress;
     //
     // Constants
     //
@@ -17,19 +18,19 @@ mod test_access_control {
     const ADMIN_ADDR: felt252 = 'access control admin';
 
     fn admin() -> ContractAddress {
-        contract_address_try_from_felt252(ADMIN_ADDR).unwrap()
+        ADMIN_ADDR.try_into().unwrap()
     }
 
     fn badguy() -> ContractAddress {
-        contract_address_try_from_felt252('bad guy').unwrap()
+        'bad guy'.try_into().unwrap()
     }
 
     fn user() -> ContractAddress {
-        contract_address_try_from_felt252('user').unwrap()
+        'user'.try_into().unwrap()
     }
 
     fn zero_addr() -> ContractAddress {
-        ContractAddressZeroable::zero()
+        Zero::zero()
     }
 
     //
@@ -127,7 +128,7 @@ mod test_access_control {
         default_grant(ref state);
 
         let u = user();
-        let u2 = contract_address_try_from_felt252('user 2').unwrap();
+        let u2 = 'user 2'.try_into().unwrap();
         state.grant_role(R2 + R3 + R4, u2);
         assert_eq!(state.get_roles(u), R1 + R2, "wrong roles for u");
         assert_eq!(state.get_roles(u2), R2 + R3 + R4, "wrong roles for u2");

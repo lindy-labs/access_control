@@ -1,5 +1,5 @@
 #[starknet::contract]
-mod mock_access_control {
+pub mod mock_access_control {
     use access_control::access_control_component;
     use starknet::ContractAddress;
 
@@ -12,7 +12,7 @@ mod mock_access_control {
     #[storage]
     struct Storage {
         #[substorage(v0)]
-        access_control: access_control_component::Storage
+        pub access_control: access_control_component::Storage
     }
 
     #[event]
