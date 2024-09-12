@@ -1,9 +1,8 @@
 mod test_access_control {
     use access_control::access_control_component::{AccessControlPublic, AccessControlHelpers};
-    use access_control::access_control_component;
     use access_control::tests::mock_access_control::mock_access_control;
     use core::num::traits::Zero;
-    use snforge_std::{spy_events, EventSpy, Event, EventSpyTrait, start_cheat_caller_address, test_address};
+    use snforge_std::{spy_events, EventSpyTrait, start_cheat_caller_address, test_address};
     use starknet::ContractAddress;
     //
     // Constants
