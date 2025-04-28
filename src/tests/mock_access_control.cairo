@@ -12,13 +12,13 @@ pub mod mock_access_control {
     #[storage]
     struct Storage {
         #[substorage(v0)]
-        pub access_control: access_control_component::Storage
+        pub access_control: access_control_component::Storage,
     }
 
     #[event]
     #[derive(Copy, Drop, starknet::Event, PartialEq)]
     enum Event {
-        AccessControlEvent: access_control_component::Event
+        AccessControlEvent: access_control_component::Event,
     }
 
     #[constructor]

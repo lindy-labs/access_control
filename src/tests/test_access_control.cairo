@@ -1,8 +1,8 @@
 mod test_access_control {
-    use access_control::access_control_component::{AccessControlPublic, AccessControlHelpers};
+    use access_control::access_control_component::{AccessControlHelpers, AccessControlPublic};
     use access_control::tests::mock_access_control::mock_access_control;
     use core::num::traits::Zero;
-    use snforge_std::{spy_events, EventSpyTrait, start_cheat_caller_address, test_address};
+    use snforge_std::{EventSpyTrait, spy_events, start_cheat_caller_address, test_address};
     use starknet::ContractAddress;
     //
     // Constants
@@ -50,7 +50,7 @@ mod test_access_control {
     }
 
     fn set_pending_admin(
-        ref state: mock_access_control::ContractState, caller: ContractAddress, pending_admin: ContractAddress
+        ref state: mock_access_control::ContractState, caller: ContractAddress, pending_admin: ContractAddress,
     ) {
         start_cheat_caller_address(test_address(), caller);
         state.set_pending_admin(pending_admin);
