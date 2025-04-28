@@ -35,7 +35,7 @@ To use this library, add the repository as a dependency in your `Scarb.toml`:
 
 ```
 [dependencies]
-access_control = { git = "https://github.com/lindy-labs/access_control.git" }
+access_control = "0.5.0"
 ```
 
 Next, define the available roles in a separate Cairo file:

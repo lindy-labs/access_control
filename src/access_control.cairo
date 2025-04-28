@@ -17,7 +17,7 @@ pub trait IAccessControl<TContractState> {
 pub mod access_control_component {
     use core::num::traits::Zero;
     use starknet::storage::{
-        StoragePointerReadAccess, StoragePointerWriteAccess, StorageMapReadAccess, StorageMapWriteAccess, Map
+        Map, StorageMapReadAccess, StorageMapWriteAccess, StoragePointerReadAccess, StoragePointerWriteAccess,
     };
     use starknet::{ContractAddress, get_caller_address};
 
@@ -25,7 +25,7 @@ pub mod access_control_component {
     pub struct Storage {
         admin: ContractAddress,
         pending_admin: ContractAddress,
-        roles: Map::<ContractAddress, u128>
+        roles: Map<ContractAddress, u128>,
     }
 
     #[event]
@@ -40,29 +40,29 @@ pub mod access_control_component {
     #[derive(Copy, Drop, starknet::Event, PartialEq)]
     pub struct AdminChanged {
         old_admin: ContractAddress,
-        new_admin: ContractAddress
+        new_admin: ContractAddress,
     }
 
     #[derive(Copy, Drop, starknet::Event, PartialEq)]
     pub struct NewPendingAdmin {
-        new_admin: ContractAddress
+        new_admin: ContractAddress,
     }
 
     #[derive(Copy, Drop, starknet::Event, PartialEq)]
     pub struct RoleGranted {
         user: ContractAddress,
-        role_granted: u128
+        role_granted: u128,
     }
 
     #[derive(Copy, Drop, starknet::Event, PartialEq)]
     pub struct RoleRevoked {
         user: ContractAddress,
-        role_revoked: u128
+        role_revoked: u128,
     }
 
     #[embeddable_as(AccessControl)]
     pub impl AccessControlPublic<
-        TContractState, +HasComponent<TContractState>
+        TContractState, +HasComponent<TContractState>,
     > of super::IAccessControl<ComponentState<TContractState>> {
         //
         // getters
@@ -126,7 +126,7 @@ pub mod access_control_component {
 
     #[generate_trait]
     pub impl AccessControlHelpers<
-        TContractState, +HasComponent<TContractState>
+        TContractState, +HasComponent<TContractState>,
     > of AccessControlHelpersTrait<TContractState> {
         fn initializer(ref self: ComponentState<TContractState>, admin: ContractAddress, roles: Option<u128>) {
             self.set_admin_helper(admin);
