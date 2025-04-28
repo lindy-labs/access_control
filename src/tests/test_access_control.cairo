@@ -15,22 +15,9 @@ mod test_access_control {
     const R4: u128 = 256_u128;
 
     const ADMIN_ADDR: felt252 = 'access control admin';
-
-    fn admin() -> ContractAddress {
-        ADMIN_ADDR.try_into().unwrap()
-    }
-
-    fn badguy() -> ContractAddress {
-        'bad guy'.try_into().unwrap()
-    }
-
-    fn user() -> ContractAddress {
-        'user'.try_into().unwrap()
-    }
-
-    fn zero_addr() -> ContractAddress {
-        Zero::zero()
-    }
+    const ADMIN: ContractAddress = ADMIN_ADDR.try_into().unwrap();
+    const BAD_GUY: ContractAddress = 'bad guy'.try_into().unwrap();
+    const USER: ContractAddress = 'user'.try_into().unwrap();
 
     //
     // Test setup
@@ -42,7 +29,7 @@ mod test_access_control {
 
     fn setup(caller: ContractAddress) -> mock_access_control::ContractState {
         let mut state = state();
-        state.access_control.initializer(admin(), Option::None);
+        state.access_control.initializer(ADMIN, Option::None);
 
         start_cheat_caller_address(test_address(), caller);
 
@@ -57,9 +44,8 @@ mod test_access_control {
     }
 
     fn default_grant(ref state: mock_access_control::ContractState) {
-        let u = user();
-        state.grant_role(R1, u);
-        state.grant_role(R2, u);
+        state.grant_role(R1, USER);
+        state.grant_role(R2, USER);
     }
 
     //
@@ -70,11 +56,9 @@ mod test_access_control {
     fn test_initializer() {
         let mut spy = spy_events();
 
-        let admin = admin();
+        let state = setup(ADMIN);
 
-        let state = setup(admin);
-
-        assert(state.get_admin() == admin, 'initialize wrong admin');
+        assert(state.get_admin() == ADMIN, 'initialize wrong admin');
 
         let events = spy.get_events();
 
@@ -83,21 +67,20 @@ mod test_access_control {
         assert_eq!(events.events.len(), 1, "wrong number of events");
         assert_eq!(event.keys[1], @selector!("AdminChanged"), "wrong event name");
         assert_eq!(*event.data[0], 0, "should be zero address");
-        assert_eq!(*event.data[1], ADMIN_ADDR, "should be admin adddress");
+        assert_eq!(*event.data[1], ADMIN.into(), "should be admin adddress");
     }
 
     #[test]
     fn test_grant_role() {
-        let mut state = setup(admin());
+        let mut state = setup(ADMIN);
 
         let mut spy = spy_events();
 
         default_grant(ref state);
 
-        let u = user();
-        assert(state.has_role(R1, u), 'role R1 not granted');
-        assert(state.has_role(R2, u), 'role R2 not granted');
-        assert_eq!(state.get_roles(u), R1 + R2, "not all roles granted");
+        assert(state.has_role(R1, USER), 'role R1 not granted');
+        assert(state.has_role(R2, USER), 'role R2 not granted');
+        assert_eq!(state.get_roles(USER), R1 + R2, "not all roles granted");
 
         let events = spy.get_events();
 
@@ -105,46 +88,44 @@ mod test_access_control {
 
         let (_, event) = events.events.at(0);
         assert_eq!(event.keys[1], @selector!("RoleGranted"), "wrong event name");
-        assert_eq!(*event.data[0], u.into(), "wrong user in event #1");
+        assert_eq!(*event.data[0], USER.into(), "wrong user in event #1");
         assert_eq!(*event.data[1], R1.into(), "wrong role in event #1");
 
         let (_, event) = events.events.at(1);
         assert_eq!(event.keys[1], @selector!("RoleGranted"), "wrong event name");
-        assert_eq!(*event.data[0], u.into(), "wrong user in event #2");
+        assert_eq!(*event.data[0], USER.into(), "wrong user in event #2");
         assert_eq!(*event.data[1], R2.into(), "wrong role in event #2");
     }
 
     #[test]
-    #[should_panic(expected: ('Caller not admin',))]
+    #[should_panic(expected: 'Caller not admin')]
     fn test_grant_role_not_admin() {
-        let mut state = setup(badguy());
-        state.grant_role(R2, badguy());
+        let mut state = setup(BAD_GUY);
+        state.grant_role(R2, BAD_GUY);
     }
 
     #[test]
     fn test_grant_role_multiple_users() {
-        let mut state = setup(admin());
+        let mut state = setup(ADMIN);
         default_grant(ref state);
 
-        let u = user();
-        let u2 = 'user 2'.try_into().unwrap();
+        let u2: ContractAddress = 'user 2'.try_into().unwrap();
         state.grant_role(R2 + R3 + R4, u2);
-        assert_eq!(state.get_roles(u), R1 + R2, "wrong roles for u");
+        assert_eq!(state.get_roles(USER), R1 + R2, "wrong roles for u");
         assert_eq!(state.get_roles(u2), R2 + R3 + R4, "wrong roles for u2");
     }
 
     #[test]
     fn test_revoke_role() {
-        let mut state = setup(admin());
+        let mut state = setup(ADMIN);
         default_grant(ref state);
 
         let mut spy = spy_events();
 
-        let u = user();
-        state.revoke_role(R1, u);
-        assert_eq!(state.has_role(R1, u), false, "role R1 not revoked");
-        assert(state.has_role(R2, u), 'role R2 not kept');
-        assert_eq!(state.get_roles(u), R2, "incorrect roles");
+        state.revoke_role(R1, USER);
+        assert_eq!(state.has_role(R1, USER), false, "role R1 not revoked");
+        assert(state.has_role(R2, USER), 'role R2 not kept');
+        assert_eq!(state.get_roles(USER), R2, "incorrect roles");
 
         let events = spy.get_events();
 
@@ -152,29 +133,28 @@ mod test_access_control {
 
         let (_, event) = events.events.at(0);
         assert_eq!(event.keys[1], @selector!("RoleRevoked"), "wrong event name");
-        assert_eq!(*event.data[0], u.into(), "wrong user in event");
+        assert_eq!(*event.data[0], USER.into(), "wrong user in event");
         assert_eq!(*event.data[1], R1.into(), "wrong role in event");
     }
 
     #[test]
-    #[should_panic(expected: ('Caller not admin',))]
+    #[should_panic(expected: 'Caller not admin')]
     fn test_revoke_role_not_admin() {
-        let mut state = setup(admin());
-        start_cheat_caller_address(test_address(), badguy());
-        state.revoke_role(R1, user());
+        let mut state = setup(ADMIN);
+        start_cheat_caller_address(test_address(), BAD_GUY);
+        state.revoke_role(R1, USER);
     }
 
     #[test]
     fn test_renounce_role() {
-        let mut state = setup(admin());
+        let mut state = setup(ADMIN);
         default_grant(ref state);
 
         let mut spy = spy_events();
 
-        let u = user();
-        start_cheat_caller_address(test_address(), u);
+        start_cheat_caller_address(test_address(), USER);
         state.renounce_role(R1);
-        assert(!state.has_role(R1, u), 'R1 role kept');
+        assert(!state.has_role(R1, USER), 'R1 role kept');
 
         // renouncing non-granted role should pass
         let non_existent_role: u128 = 64;
@@ -186,22 +166,22 @@ mod test_access_control {
 
         let (_, event) = events.events.at(0);
         assert_eq!(event.keys[1], @selector!("RoleRevoked"), "wrong event name");
-        assert_eq!(*event.data[0], u.into(), "wrong user in event #1");
+        assert_eq!(*event.data[0], USER.into(), "wrong user in event #1");
         assert_eq!(*event.data[1], R1.into(), "wrong role in event #1");
 
         let (_, event) = events.events.at(1);
         assert_eq!(event.keys[1], @selector!("RoleRevoked"), "wrong event name");
-        assert_eq!(*event.data[0], u.into(), "wrong user in event #2");
+        assert_eq!(*event.data[0], USER.into(), "wrong user in event #2");
         assert_eq!(*event.data[1], non_existent_role.into(), "wrong role in event #2");
     }
 
     #[test]
     fn test_set_pending_admin() {
-        let mut state = setup(admin());
+        let mut state = setup(ADMIN);
 
         let mut spy = spy_events();
 
-        let pending_admin = user();
+        let pending_admin = USER;
         state.set_pending_admin(pending_admin);
         assert(state.get_pending_admin() == pending_admin, 'pending admin not changed');
 
@@ -215,19 +195,19 @@ mod test_access_control {
     }
 
     #[test]
-    #[should_panic(expected: ('Caller not admin',))]
+    #[should_panic(expected: 'Caller not admin')]
     fn test_set_pending_admin_not_admin() {
-        let mut state = setup(admin());
-        start_cheat_caller_address(test_address(), badguy());
-        state.set_pending_admin(badguy());
+        let mut state = setup(ADMIN);
+        start_cheat_caller_address(test_address(), BAD_GUY);
+        state.set_pending_admin(BAD_GUY);
     }
 
     #[test]
     fn test_accept_admin() {
-        let current_admin = admin();
+        let current_admin = ADMIN;
         let mut state = setup(current_admin);
 
-        let pending_admin = user();
+        let pending_admin = USER;
         set_pending_admin(ref state, current_admin, pending_admin);
 
         let mut spy = spy_events();
@@ -249,36 +229,36 @@ mod test_access_control {
     }
 
     #[test]
-    #[should_panic(expected: ('Caller not pending admin',))]
+    #[should_panic(expected: 'Caller not pending admin')]
     fn test_accept_admin_not_pending_admin() {
-        let current_admin = admin();
+        let current_admin = ADMIN;
         let mut state = setup(current_admin);
 
-        let pending_admin = user();
+        let pending_admin = USER;
         set_pending_admin(ref state, current_admin, pending_admin);
 
-        start_cheat_caller_address(test_address(), badguy());
+        start_cheat_caller_address(test_address(), BAD_GUY);
         state.accept_admin();
     }
 
     #[test]
     fn test_assert_has_role() {
-        let mut state = setup(admin());
+        let mut state = setup(ADMIN);
         default_grant(ref state);
 
-        start_cheat_caller_address(test_address(), user());
+        start_cheat_caller_address(test_address(), USER);
         // should not throw
         state.access_control.assert_has_role(R1);
         state.access_control.assert_has_role(R1 + R2);
     }
 
     #[test]
-    #[should_panic(expected: ('Caller missing role',))]
+    #[should_panic(expected: 'Caller missing role')]
     fn test_assert_has_role_panics() {
-        let mut state = setup(admin());
+        let mut state = setup(ADMIN);
         default_grant(ref state);
 
-        start_cheat_caller_address(test_address(), user());
+        start_cheat_caller_address(test_address(), USER);
         state.access_control.assert_has_role(R3);
     }
 }
