@@ -9,10 +9,10 @@ mod test_access_control {
     //
 
     // mock roles
-    const R1: u128 = 1_u128;
-    const R2: u128 = 2_u128;
-    const R3: u128 = 128_u128;
-    const R4: u128 = 256_u128;
+    const R1: u128 = 1;
+    const R2: u128 = 2;
+    const R3: u128 = 128;
+    const R4: u128 = 256;
 
     const ADMIN_ADDR: felt252 = 'access control admin';
     const ADMIN: ContractAddress = ADMIN_ADDR.try_into().unwrap();
